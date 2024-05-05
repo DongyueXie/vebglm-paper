@@ -6,9 +6,10 @@ import rpy2.robjects.packages as rpackages
 import timeit
 
 class glmnetR:
-    def __init__(self,penalty="lasso",family="binomial"):
+    def __init__(self,penalty="lasso",family="binomial",rule='lambda.1se'):
         self.model_name = penalty
         self.family = family
+        self.rule = rule
 
     def fit(self, X,y,weights=None,standardize=False,intercept=True):
         startime = timeit.default_timer()
@@ -31,7 +32,7 @@ class glmnetR:
             weights = NULL
         r('set.seed(12345)')
         cv_fit = glmnet.cv_glmnet(x=X_r, y=y_r, family=self.family,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
-        optimal_lambda = cv_fit.rx2('lambda.1se')
+        optimal_lambda = cv_fit.rx2(self.rule)
         final_fit = glmnet.glmnet(x=X_r, y=y_r, family=self.family, lambda_=optimal_lambda,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
 
         coefficients = r['as.matrix'](glmnet.coef_glmnet(final_fit, s=optimal_lambda))

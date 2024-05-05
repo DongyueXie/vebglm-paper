@@ -1,7 +1,10 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append('/home/mypro3/myPy/VEBGLM/src')
+current_dir = os.path.dirname(os.path.realpath(__file__))
+myPy_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
+sys.path.append(os.path.join(myPy_dir, 'VEBGLM', 'src'))
+
 from VEBGLM import VEBGLM
 import numpy as np
 import pandas as pd
@@ -22,19 +25,20 @@ import timeit
 
 
 def main(args):
-    np.random.seed(12345)
+    
     n_values = [int(n) for n in args.n_values.split(',')]
     p_values = [int(p) for p in args.p_values.split(',')]
     r_values = [float(r) for r in args.r_values.split(',')]
     s_values = [int(s) for s in args.s_values.split(',')]
     dist_values = [str(d) for d in args.beta_dist.split(',')]
     repetitions = args.repetitions
-    # target_var = args.target_var
-    # Define models and metrics
-    # bayesregR(),
-    models = [VEBGLM(prior='ash',tol=1e-6),
-              VEBGLM(prior='point_normal',tol=1e-6),
-              VEBGLM(prior='point_laplace',tol=1e-6),
+    # solver = "lbfgs" and init = 'lasso.min' for rho simulation for vebglm
+    # solver = "lbfgs2" and init = 'lasso.1se' for s simulation for vebglm-ash
+    # solver = "L-BFGS-B2" and init = 'lasso.1se' for p simulation for vebglm
+
+    models = [VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2'),
+              VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B2'),
+              VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B2'),
               elasticnetR(),
               glmnetR(penalty="lasso"),
               glmnetR(penalty="ridge"),
@@ -42,8 +46,7 @@ def main(args):
               ncvregR(penalty='SCAD'),
               ncvregR(penalty='MCP'),
               sparsevbR(),
-              varbvsR()]
-              # bayesregR(prior='hs')
+              varbvsR(),]
     
               
     metrics = [accuracy_score, precision_score, recall_score, f1_score,roc_auc_score]
@@ -52,31 +55,34 @@ def main(args):
     results = []
     datax = []
     fitted_models = []
+    seed = 0
     for n in n_values:
         for p in p_values:
             for s in s_values:
                 for r in r_values:
                     for dist in dist_values:
                         for rep in range(repetitions):
+                            
                             print(f"running setting {n,p,s,r,dist}, rep {rep}")
                             start_t = timeit.default_timer()
+                            np.random.seed(seed)
                             beta = gen_beta(p,s,dist)
                             X_train, y_train = generate_train_data_binary(n, p, r, beta, X_generator)
                             X_test, y_test = generate_test_data_binary(args.n_test, p, r,beta, X_generator)
-                            datax.append({
-                                        'n': n,
-                                        'p': p,
-                                        'r': r,
-                                        's': s,
-                                        'beta_dist': dist,
-                                        'rep': rep,
-                                        'beta':beta,
-                                        'X_train':X_train,
-                                        'y_train':y_train,
-                                        'X_test':X_test,
-                                        'y_test':y_test})
-                            with open(f"simulation/results/simu_data_{args.file_name}.pkl",'wb') as aa:
-                                pickle.dump(datax, aa)
+                            # datax.append({
+                            #             'n': n,
+                            #             'p': p,
+                            #             'r': r,
+                            #             's': s,
+                            #             'beta_dist': dist,
+                            #             'rep': rep,
+                            #             'beta':beta,
+                            #             'X_train':X_train,
+                            #             'y_train':y_train,
+                            #             'X_test':X_test,
+                            #             'y_test':y_test})
+                            # with open(f"simulation/results/simu_data_{args.file_name}.pkl",'wb') as aa:
+                            #     pickle.dump(datax, aa)
                             for model in models:
                                 try:
                                     model.fit(X_train, y_train)
@@ -90,10 +96,11 @@ def main(args):
                                         's': s,
                                         'beta_dist': dist,
                                         'rep': rep,
+                                        'seed': seed,
+                                        'true_beta': beta,
                                         'fitted_model': model,
                                     })
-                                    with open(f"simulation/results/simu_fitted_model_{args.file_name}.pkl", "wb") as fp:
-                                        pickle.dump(fitted_models, fp)
+
                                     for metric in metrics:
                                         if metric.__name__ == 'roc_auc_score':
                                             score = metric(y_test, y_prob)
@@ -106,23 +113,26 @@ def main(args):
                                             's': s,
                                             'beta_dist': dist,
                                             'rep': rep,
+                                            'seed': seed,
                                             'model': model_name,
                                             'metric': metric.__name__,
                                             'score': score,
                                             'run_time': model.run_time
                                         })
-                                    # save result after every modelling fitting
-                                    with open(f"simulation/results/simu_metric_{args.file_name}.pkl", "wb") as fp:
-                                        pickle.dump(results, fp)
+
                                 except Exception as e:
                                     print(f"Error with model {model.model_name}: {e}")
                                     continue
                             end_t = timeit.default_timer()
-                            print(f"Took {end_t-start_t} seconds")
+                            seed += 1
+                            print(f"Rep {rep} took {end_t-start_t} seconds")
+                            with open(f"simulation/results/simu_fitted_model_{args.file_name}.pkl", "wb") as fp:
+                                pickle.dump(fitted_models, fp)
+                            with open(f"simulation/results/simu_metric_{args.file_name}.pkl", "wb") as fp:
+                                pickle.dump(results, fp)
 
 
-
-    return datax, results
+    return results
 
 
     
@@ -141,7 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--file_name', type=str, default='default', help='Number of repetitions for each setting')
     parser.add_argument('--beta_dist', type=str, default='normal', help='Number of repetitions for each setting')
     args = parser.parse_args()
-    _, results = main(args)
+    results = main(args)
     # Analyze results
     results_df = pd.DataFrame(results)
     res = results_df.groupby(['model', 'metric','n','p','r','s','beta_dist']).mean().reset_index()
