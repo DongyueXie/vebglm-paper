@@ -112,11 +112,11 @@ def load_dataset(categories,verbose=False, seed=42,remove=()):
 
 
 categories_all = [
-#  'comp.graphics',
-#  'comp.os.ms-windows.misc',
-#  'comp.sys.ibm.pc.hardware',
-#  'comp.sys.mac.hardware',
-#  'comp.windows.x',
+ 'comp.graphics',
+ 'comp.os.ms-windows.misc',
+ 'comp.sys.ibm.pc.hardware',
+ 'comp.sys.mac.hardware',
+ 'comp.windows.x',
 #  'misc.forsale',
 #  'rec.autos',
 #  'rec.motorcycles',
@@ -126,12 +126,12 @@ categories_all = [
 #  'sci.electronics',
 #  'sci.med',
 #  'sci.space',
- 'talk.politics.guns',
- 'talk.politics.mideast',
- 'talk.politics.misc',
- 'talk.religion.misc',
- 'alt.atheism',
- 'soc.religion.christian',
+#  'talk.politics.guns',
+#  'talk.politics.mideast',
+#  'talk.politics.misc',
+#  'talk.religion.misc',
+#  'alt.atheism',
+#  'soc.religion.christian',
 ]
 
 def real_benchmark(models,metrics,file_name=None):
@@ -181,25 +181,22 @@ def real_benchmark(models,metrics,file_name=None):
 
 def main():
 
-    models = [VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2',name_suffix='L-BFGS-B2'),
+    models = [
+        VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2',name_suffix='L-BFGS-B2'),
         VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B2',name_suffix='L-BFGS-B2'),
         VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B2',name_suffix='L-BFGS-B2'),
 
         VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B',name_suffix='L-BFGS-B'),
         VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B',name_suffix='L-BFGS-B'),
         VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B',name_suffix='L-BFGS-B'),
-
-        elasticnetR(),
         glmnetR(penalty="lasso"),
-        glmnetR(penalty="ridge"),
         L0Learn(),
         ncvregR(penalty='SCAD'),
         ncvregR(penalty='MCP'),
-        sparsevbR(),
         varbvsR(),
         ]
     metrics = [accuracy_score, precision_score, recall_score, f1_score,roc_auc_score]
-    real_benchmark(models,metrics,file_name='talk')
+    real_benchmark(models,metrics,file_name='comp')
         
 
 if __name__ == "__main__":

@@ -32,21 +32,22 @@ def main(args):
     s_values = [int(s) for s in args.s_values.split(',')]
     dist_values = [str(d) for d in args.beta_dist.split(',')]
     repetitions = args.repetitions
-    # solver = "lbfgs" and init = 'lasso.min' for rho simulation for vebglm
-    # solver = "lbfgs2" and init = 'lasso.1se' for s simulation for vebglm-ash
-    # solver = "L-BFGS-B2" and init = 'lasso.1se' for p simulation for vebglm
+    
+    # Use solver = "L-BFGS-B2" and init = 'lasso.1se' for simulations for vebglm
 
-    models = [VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2'),
-              VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B2'),
-              VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B2'),
-              elasticnetR(),
-              glmnetR(penalty="lasso"),
-              glmnetR(penalty="ridge"),
-              L0Learn(),
-              ncvregR(penalty='SCAD'),
-              ncvregR(penalty='MCP'),
-              sparsevbR(),
-              varbvsR(),]
+    models = [
+            VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2'),
+            VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B2'),
+            VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B2'),
+            elasticnetR(),
+            glmnetR(penalty="lasso"),
+            glmnetR(penalty="ridge"),
+            L0Learn(),
+            ncvregR(penalty='SCAD'),
+            ncvregR(penalty='MCP'),
+            sparsevbR(),
+            varbvsR(),
+        ]
     
               
     metrics = [accuracy_score, precision_score, recall_score, f1_score,roc_auc_score]
@@ -55,12 +56,12 @@ def main(args):
     results = []
     datax = []
     fitted_models = []
-    seed = 0
     for n in n_values:
         for p in p_values:
             for s in s_values:
                 for r in r_values:
                     for dist in dist_values:
+                        seed = 0
                         for rep in range(repetitions):
                             
                             print(f"running setting {n,p,s,r,dist}, rep {rep}")
