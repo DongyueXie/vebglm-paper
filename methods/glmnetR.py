@@ -6,10 +6,11 @@ import rpy2.robjects.packages as rpackages
 import timeit
 
 class glmnetR:
-    def __init__(self,penalty="lasso",family="binomial",rule='lambda.1se'):
+    def __init__(self,penalty="lasso",family="binomial",rule='lambda.1se', cv_measure='deviance'):
         self.model_name = penalty
         self.family = family
         self.rule = rule
+        self.cv_measure = cv_measure
 
     def fit(self, X,y,weights=None,standardize=False,intercept=True):
         startime = timeit.default_timer()
@@ -31,7 +32,7 @@ class glmnetR:
         else:
             weights = NULL
         r('set.seed(12345)')
-        cv_fit = glmnet.cv_glmnet(x=X_r, y=y_r, family=self.family,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
+        cv_fit = glmnet.cv_glmnet(x=X_r, y=y_r, family=self.family,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha,type_measure=self.cv_measure)
         optimal_lambda = cv_fit.rx2(self.rule)
         final_fit = glmnet.glmnet(x=X_r, y=y_r, family=self.family, lambda_=optimal_lambda,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
 
@@ -68,9 +69,11 @@ class glmnetR:
 
 
 class elasticnetR:
-    def __init__(self,family="binomial"):
+    def __init__(self,family="binomial",rule='lambda.1se', cv_measure='deviance'):
         self.model_name = 'elasticnet'
         self.family=family
+        self.rule = rule
+        self.cv_measure = cv_measure
 
     def fit(self, X,y,weights=None,standardize=False,intercept=True):
         
@@ -91,14 +94,17 @@ class elasticnetR:
         # best_model = None
         best_model_loss = float('Inf') 
         optimal_lambda = None
+        optimal_alpha = None
         for alpha in alpha_list:
-            cv_fit = glmnet.cv_glmnet(x=X_r, y=y_r, family=self.family,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
-            if min(r['as.vector'](cv_fit.rx2('cvm'))) < best_model_loss:
-                # best_model = cv_fit
-                best_model_loss = min(r['as.vector'](cv_fit.rx2('cvm')))
-                optimal_lambda = cv_fit.rx2('lambda.1se')
+            cv_fit = glmnet.cv_glmnet(x=X_r, y=y_r, family=self.family,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha, type_measure=self.cv_measure)
+            optimal_idx = list(cv_fit.rx2('lambda')).index(cv_fit.rx2(self.rule)[0])
+            current_loss = cv_fit.rx2('cvm')[optimal_idx]
+            if current_loss < best_model_loss:
+                best_model_loss = current_loss
+                optimal_lambda = cv_fit.rx2(self.rule)
+                optimal_alpha = alpha
             
-        final_fit = glmnet.glmnet(x=X_r, y=y_r, family=self.family, lambda_=optimal_lambda,weights = weights, standardize=standardize,intercept=intercept,alpha=alpha)
+        final_fit = glmnet.glmnet(x=X_r, y=y_r, family=self.family, lambda_=optimal_lambda,weights = weights, standardize=standardize,intercept=intercept,alpha=optimal_alpha)
 
         coefficients = r['as.matrix'](glmnet.coef_glmnet(final_fit, s=optimal_lambda))
         coef_array = np.array(coefficients)[:, 0]  
@@ -107,6 +113,7 @@ class elasticnetR:
 
         self.fitted_model = final_fit
         self.optimal_lambda=optimal_lambda
+        self.optimal_alpha = optimal_alpha
         
         self.run_time = timeit.default_timer() - startime
         self.beta = fitted_coefs
