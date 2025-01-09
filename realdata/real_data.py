@@ -23,12 +23,12 @@ import timeit
 from process_data import *
 
 
-def real_benchmark(X,y,models,metrics,reps=20,data_name=None,file_name=None):
+def real_benchmark(X,y,models,metrics,reps=20,data_name=None,file_name=None,test_size=2/5):
     results = []
     for i in range(reps):
         print(f"running data {data_name}, rep {i}")
         start_t = timeit.default_timer()
-        X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=2/5,random_state=i)
+        X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=test_size,random_state=i)
         for model in models:
             try:
                 model.fit(X_train, y_train)
@@ -64,7 +64,6 @@ def main():
         VEBGLM(prior='ash',tol=1e-6,solver='L-BFGS-B2'),
         VEBGLM(prior='point_normal',tol=1e-6,solver='L-BFGS-B2'),
         VEBGLM(prior='point_laplace',tol=1e-6,solver='L-BFGS-B2'),
-        elasticnetR(),
         glmnetR(penalty="lasso"),
         L0Learn(),
         ncvregR(penalty='SCAD'),
@@ -73,11 +72,10 @@ def main():
         ]
     metrics = [accuracy_score, precision_score, recall_score, f1_score,roc_auc_score]
     datasets = [Ionosphere, annealing, adult, heart_disease, Pediatric, abalone]
-    # datasets = [musk]
 
     for data in datasets:
         X,y = data()
-        real_benchmark(X,y,models,metrics,reps=20,data_name=data.__name__,file_name='final')
+        real_benchmark(X,y,models,metrics,reps=20,data_name=data.__name__,file_name='elnet_rerun',test_size=2/5)
 
 if __name__ == "__main__":
     main()
