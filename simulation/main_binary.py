@@ -47,6 +47,7 @@ def main(args):
             ncvregR(penalty='MCP'),
             sparsevbR(),
             varbvsR(),
+            bayesregR(),
         ]
     
               
@@ -86,10 +87,12 @@ def main(args):
                             #     pickle.dump(datax, aa)
                             for model in models:
                                 try:
+                                    print(f"Fitting model: {model.model_name}")
                                     model.fit(X_train, y_train)
                                     y_pred = model.predict(X_test)
                                     y_prob = model.predict_proba(X_test)
                                     model_name =  model.model_name
+                                    print(f"Took {model.run_time} seconds")
                                     fitted_models.append({
                                         'n': n,
                                         'p': p,
@@ -105,6 +108,7 @@ def main(args):
                                     for metric in metrics:
                                         if metric.__name__ == 'roc_auc_score':
                                             score = metric(y_test, y_prob)
+                                            print(f"ROC AUC Score: {score}")
                                         else:    
                                             score = metric(y_test, y_pred)
                                         results.append({
